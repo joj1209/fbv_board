@@ -233,7 +233,7 @@ to_char(sysdate,'YYYYMMDD')
 ,:vs_set_vadpgm
 ,:vs_set_vadpam
 ,:vs_set_vadrgb
-,:vs_set_content
+,:vs_err_content
 ,1
 ,to_timestamp(:vs_st_date,'YYYYMMDDHH24MISSFF')
 ,sysdate
