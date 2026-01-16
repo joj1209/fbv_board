@@ -136,6 +136,9 @@ For ( ii 0;; ii++)
 ;
 
 vs_sqlcd = sqlca.sqlcode;
+if (sqlca.sqlcode !=0 && sqlca.sqlcode != 100) {
+ break;
+}
 
 /* 테이블검증=> 테이블컬럼검증 => 테이블컬럼TYPE검증 */
 /* --비교 테이블이 다르고 오류로그 저장내용 존재시 테이블단위 오류로그 등록 저장후 비교 테이블 초기화 */
