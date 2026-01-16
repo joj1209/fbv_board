@@ -229,7 +229,7 @@ to_char(sysdate,'YYYYMMDD')
 ,:vs_set_vadgbn
 ,:vs_set_vadtyh
 ,:vs_vadcnt
-,:테이블메타검증'
+,'테이블메타검증'
 ,:vs_set_vadpgm
 ,:vs_set_vadpam
 ,:vs_set_vadrgb
@@ -299,7 +299,7 @@ If ( jj == 2)
 {
  Strcat(vs_string, "\n   상위컬럼외 다수 테이블컬럼명 오류. ");
 }
-jj+;
+jj++;
 }
 Else if (strcmp(vs_vadctn,"3테이블컬럼TYPE검증") == 0 )
 {
@@ -352,7 +352,7 @@ If (( vs_lastchk_cnt-1) == ii)
 {
  If (strcmp(vs_set_vadtab, vs_chk_vadtab) == 0)
 {
- Strcpy(vs_err_content, vs_String);
+ Strcpy(vs_err_content, vs_string);
  vs_workcnt=0;
 
  if (strcmp(vs_err_content,"") != 0) 
@@ -397,7 +397,7 @@ Values
 );
 
 vs_workcnt=SQLCNT;
-vs_toterinsert=vs_toterinsert+1;
+vs_toterinscnt=vs_toterinscnt+1;
 
 vs_sqlcd = sqlca.sqlcode;
 sprintf(vs_sqlmsg, "%s \n",sqlca.sqlerrm.sqlerrmc);
