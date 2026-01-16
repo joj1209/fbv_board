@@ -248,7 +248,7 @@ sprintf(vs_sqlmsg, "%s \n",sqlca.sqlerrm.sqlerrmc);
 strcpy(vs_ed_time,(char*)getTime());
 
 if (sqlca.sqlcode !=0 && sqlca.sqlcode != 100) {
- exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
+ exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sqlcd);
  exec sql rollback work release; 
  return(NK)
 }
@@ -404,7 +404,7 @@ sprintf(vs_sqlmsg, "%s \n",sqlca.sqlerrm.sqlerrmc);
 strcpy(vs_ed_time,(char*)getTime());
 
 if (sqlca.sqlcode !=0 && sqlca.sqlcode != 100) {
- exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
+ exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sqlcd);
  exec sql rollback work release ;
  return(NK);
 }
@@ -424,7 +424,7 @@ Exec sql close c1;
 vs_workcnt = vs_toterinscnt;
 
 exec sql commit work;
-exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
+exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sqlcd);
 
 return(OK);
 }
