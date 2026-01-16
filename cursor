@@ -56,7 +56,7 @@ char vs_vadrow=0; /* Fetch rownumber 변수*/
 
 /* 체크용 변수선정 */
 char vs_chk_vadtab[100+1]; /* 테이블명 */
-in vs_lastchk_cnt=0;  /* 검증결과 오류건 loop건수 */
+int vs_lastchk_cnt=0;  /* 검증결과 오류건 loop건수 */
 
 /* 적재용 변수선정 */
 char vs_st_date[23+1]; /* 검증시작일시 */
@@ -159,7 +159,7 @@ Memset(vs_string, 0x00,5001); /* 검증오류값 누적변수 */
 Strcpy(vs_err_content,"");
 Strcpy(vs_string,"");
 
-For ( ii 0;; ii++)
+for ( ii = 0;; ii++)
 {
   Exec sql fetch c1
   Into
