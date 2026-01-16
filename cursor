@@ -273,7 +273,7 @@ kk=0;
 
 if (strcmp(vs_vadctn, "1테이블검증") ==0)
 {
- Strcat(vs_string,"\n [ 테이블검증 ]";
+ Strcat(vs_string,"\n [ 테이블검증 ]");
  Strcat(vs_string,"\n -. TABLE : ");
  Strcat(vs_string,vs_vadtab); 
  Strcat(vs_string,"\n -.    오류내용 : ");
@@ -289,7 +289,7 @@ Else if (strcmp(vs_vadctn, "2차테이블컬럼검증")==0)
     Strcat(vs_string,"\n -. TABLE : ");
     Strcat(vs_string, vs_vadtab);
   }
-  Strcat(vs_string,"\n   COLUMN : ";
+  Strcat(vs_string,"\n   COLUMN : ");
   Strcat(vs_string,vs_vadcol);
   Strcat(vs_string,",  오류내용 : ");
   Strcat(vs_string,vs_vadrva);
@@ -339,7 +339,7 @@ Memset(vs_set_vadpgm,0x00,101); /* SET 검증프로그램ID 초기화 */
 Memset(vs_set_vadpam,0x00,11); /* SET 파라미터값 초기화 */
 Memset(vs_set_vadrgb,0x00,3); /* SET 검증결과구분 초기화 */
 
-Strcpy(vs_set_dwdbgb, vs_dwdmgb);
+Strcpy(vs_set_dwdmgb, vs_dwdmgb);
 Strcpy(vs_set_vadtab, vs_vadtab );
 Strcpy(vs_set_vadgbn, vs_vadgbn );
 Strcpy(vs_set_vadtyh, vs_vadtyh );
