@@ -11,6 +11,21 @@
 
 EXEC SQL BEGIN DECLARE SECTION;
 
+/* SQL Job log variable */ 
+int vs_workcnt;
+int vs_job_step;
+char vs_pgm_id[100+1];
+char vs_pgm_nm[100+1];
+char vs_tbl_nm[100+1];
+char vs_step_nm[100+1];
+int vs_sqlcd;
+char vs_sqlmsg[1000+1];
+char vs_rtn0[100+1];
+char vs_frst_st_time[14+1];
+char vs_st_time[14+1];
+char vs_ed_time[14+1];
+
+/* 커서용 변수 */
 int ii=0; /* Fetch loop 변수 */
 int jj=0; /* 컬럼오류 loop 변수 */
 int kk=0; /* 컬럼type오류 loop 변수 */
@@ -55,8 +70,11 @@ char vs_set_vadpgm[100+1]; /* SET 검증프로그램ID */
 char vs_set_vadpam[10+1]; /* SET 파라미터값 */
 char vs_set_vadrgb[2+1]; /* SET 검증결과구분 */
 
+
+
 EXEC SQL END DECLARE SECTION;
 long sqlcode;
+
 
 int main(int argc, char *argv[])
 {
@@ -70,9 +88,38 @@ int main(int argc, char *argv[])
 	return(OK);
 }
 
+
+/* F_MainProc */
 int F_MainProc()
 {
 	EXEC SQL WHENEVER SQLERROR CONTINUE;
+
+
+/* STEP002 프로그램검증현황 SELECT */
+vs_workcnt = 0;
+exec sql
+select lpad(to_char(to_number(nvl(차수),'0')) + 1),2 '0') as 차수
+      , to_char(systimestamp,'YYYYMMDDHH24MISSFF')
+into :vs_seq_d
+     , :vs_st_date
+from BM.프로그램검증현황 N10
+where N10.기준일자 = to_char(sysdate,'YYYYMMDD')
+and N10.검증유형 = '04'
+;
+
+/* STEP008 검증 오류 건수 select */
+vs_workcnt = 0;
+exec sql
+select nvl(count(n10.타겟테이블명),1)
+into :vs_lastchk_cnt
+from BMWRK.프로그램검증현황01_02 n10
+left outer join bmwrk.프로그램검증현황01_01 n11
+on n11.DWDM구분코드 = n10.dwdm구분코드
+and n11.테이블명 = n10.타겟테이블명
+where n11.테이블명 is null
+;
+
+/* STEP009 검증 오류 insert */
 
 
 exec sql declare c1 cursor for
@@ -136,7 +183,11 @@ For ( ii 0;; ii++)
 ;
 
 vs_sqlcd = sqlca.sqlcode;
+sprintf(vs_sqlmsg, "%s \n",sqlca.sqlerrm.sqlerrmc);
+strcpy(vs_ed_time,(char*)getTime());
+
 if (sqlca.sqlcode !=0 && sqlca.sqlcode != 100) {
+ exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
  break;
 }
 
@@ -190,6 +241,17 @@ to_char(sysdate,'YYYYMMDD')
 
 vs_workcnt=SQLCNT;
 vs_toterinscnt=vs_toterinscnt+1;
+
+
+vs_sqlcd = sqlca.sqlcode;
+sprintf(vs_sqlmsg, "%s \n",sqlca.sqlerrm.sqlerrmc);
+strcpy(vs_ed_time,(char*)getTime());
+
+if (sqlca.sqlcode !=0 && sqlca.sqlcode != 100) {
+ exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
+ exec sql rollback work release; 
+ return(NK)
+}
 
 /* 체크용 변수 초기화 */
 Memset(vs_err_content,0x00,5001); /* 검증오류 등록변수  */
@@ -336,6 +398,17 @@ Values
 
 vs_workcnt=SQLCNT;
 vs_toterinsert=vs_toterinsert+1;
+
+vs_sqlcd = sqlca.sqlcode;
+sprintf(vs_sqlmsg, "%s \n",sqlca.sqlerrm.sqlerrmc);
+strcpy(vs_ed_time,(char*)getTime());
+
+if (sqlca.sqlcode !=0 && sqlca.sqlcode != 100) {
+ exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
+ exec sql rollback work release ;
+ return(NK);
+}
+
 }
 }
 }
@@ -350,7 +423,8 @@ Exec sql close c1;
 
 vs_workcnt = vs_toterinscnt;
 
-Exec sql commit work;
+exec sql commit work;
+exec sql call bm.sp_log_adw(:vs_pgm_id:vs_st_time:vs_ed_time:vs_workcnt:vs_sql_cd);
 
 return(OK);
 }
