@@ -58,6 +58,48 @@ set vs_rejt_cnt = 0;
 
 set in_data_prcs_cnt = coalesce(in_data_prcs_cnt,0);
 
+/* 작업단계번호 셋팅 */
+set vs_job_err_ltrs_nbr = in_job_err_ltrs_nbr;
+set vs_job_step_nbr = lpad(cast(in_job_step_nbr as string),3,'0');
+
+/* 주제영역 */
+set vs_sbj_gb = upper(substr(in_prg_id,4,2));
+
+/* 초기변경구분 */
+if upper(substr(in_prg_id,2,1)) = 'I' then set vs_ic_gb = 'INI';
+else set vs_ic_gb = 'CHG';
+end if;
+
+/* 스키마/테이블명 셋팅 */
+set vs_schema = substr(in_tbl_nm,1,strpos(in_tbl_nm,'.')-1);
+set vs_tbl_nm = substr(in_tbl_nm,strpos(in_tbl_nm,'.')+1);
+
+/* 영역구분/주제영역/초기변경구분 셋팅 */
+if upper(substr(in_prg_id,1,4)) = 'MIG_'
+then set vs_prg_gb = 'MG'; 
+  set vs_sbj_gb = 'MG';
+  set vs_ic_gb = 'INI';
+  set vs_schema = substr(in_tbl_nm,1,strpos(in_tbl_nm,'.')-1);
+elseif upper(substr(in_prg_id,1,3)) = 'AEB'
+then set vs_prg_gb = 'IF';
+  set vs_sbj_gb = upper(substr(in_prg_id,4,3));
+  set vs_ic_gb = 'CHG';
+  set vs_schema = vs_sbj_gb;
+elseif upper(substr(in_prg_id,1,3)) = 'WF_'
+then set vs_prg_gb = 'STG'
+  set vs_sbj_gb = upper(substr(in_prg_id,7,2));
+  if upper(substr(in_prg_id,1,1)) = 'C' then set vs_ic_gb = 'CHG'; else set vs_ic_gb = 'INI'; end if;
+elseif upper(substr(in_prg_id,1,1)) = 'M' then set vs_prg_gb = 'DM';
+else set vs_prg_gb = 'DW';
+end if;
+
+if in_dml_gbn = 'I' then set vs_ins_cnt = in_data_prcs_cnt;
+elseif in_dml_gbn = 'I' then set vs_del_cnt = in_data_prcs_cnt;
+elseif in_dml_gbn = 'L' then set vs_read_cnt = in_data_prcs_cnt;
+elseif in_dml_gbn = 'R' then set vs_rejt_cnt = in_data_prcs_cnt;
+else set vs_ins_cnt = 0;
+end if; 
+
 set ( vs_yyyymm, vs_job_d, vs_work_d, vs_bse_smt, vs_bse_emt )
 = (select as struct substr(in_job_base_dt,1,6)
 , in_job_base_dt
@@ -67,6 +109,7 @@ else in_job_base_dt end
 , format_date("%Y%m%d",lase_day(parse_date("%Y%m",substr(in_job_base_dt,1,6))))
 );
 
+/* 프로그램 최초 실행 시간 */
 set v_run_time_1 = (select coalesce(format_time('%H%M%S',time_add(time 00:00:00',interval(unix_seconds(parse_timestamp('%Y%m%d%H%M%S',in_job_end_dtl_dttm)) - unix_seconds(parse_timestamp('%Y%m%d%H%M%S',in_frst_job_start_dtl_dttm))) second)), 'xx'));
 
 set v_run_time = (select coalesce(format_time('%H%M%S',time_add(time 00:00:00',interval(unix_seconds(parse_timestamp('%Y%m%d%H%M%S',in_job_end_dtl_dttm)) - unix_seconds(parse_timestamp('%Y%m%d%H%M%S',in_job_start_dtl_dttm))) second)), 'xx'));
@@ -81,27 +124,99 @@ set v_cnt = (select count(1) from dm_log where 프로그램id = in_prg_id
 and 작업시작일시 = parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm));
 
 if v_cnt = 0 then
+/* 처음 시작이고 프로그램 종료가 아닌경우 프로그램 시작로그 입력 */
 insert into dm_log (영역구분명, 주제영역명, 초기변경구분코드, 프로그램ID, 스키마, 테이블명, 기준일자, 작업단계번호, 작업시작일시, 작업종료일시, 작업경과시간, 차수, INSERT건수, DELETE건수, READ건수, REJECT건수, 작업종료여부, 작업결과코드, 작업에러문자번호, 작업에러내용)
-select vs_prg_gb, vs_sbj_gb, vs_ic_gb, in_prg_id, coalesce(vs_schema,'ZZ'), vs_tbl_nm
-, vs_job_d, vs_job_step_nbr, parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm)
-, parse_datetime("%Y%m%d%H%M%S",in_job_end_dtl_dttm), v_runtime_1, coalesce(in_prg_sq, ' '), coalesce(vs_int_cnt,0), coalesce(vs_del_cnt,0), coalesce(vs_read_cnt,0), coalesce(vs_rejt_cnt,0),'N', vs_job_prgrs_rslt_cd, coalesce(vs_job_err_ltrs_nbr,''), coalesce(vs_job_err_cntnt, ' ');
+select vs_prg_gb as `영역구분명`
+, vs_sbj_gb as `주제영역명`
+, vs_ic_gb as `초기변경구분코드`
+, in_prg_id as `프로그램ID`
+, coalesce(vs_schema,'ZZ') as `스키마`
+, vs_tbl_nm as `테이블명`
+, vs_job_d as `기준일자`
+, vs_job_step_nbr as `작업단계번호`
+, parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm) as `작업시작일시`
+, parse_datetime("%Y%m%d%H%M%S",in_job_end_dtl_dttm) as `작업종료일시`
+, v_runtime_1 as `작업경과시간`
+, coalesce(in_prg_sq, ' ') as `차수`
+, coalesce(vs_int_cnt,0) as `INSERT건수`
+, coalesce(vs_del_cnt,0) as `DELETE건수`
+, coalesce(vs_read_cnt,0) as `READ건수`
+, coalesce(vs_rejt_cnt,0) as `REJECT건수`
+,'N' as `작업종료여부`
+, vs_job_prgrs_rslt_cd as `작업결과코드`
+, coalesce(vs_job_err_ltrs_nbr,'') as `작업에러문자번호`
+, coalesce(vs_job_err_cntnt, ' ') as `작업에러내용`
+;
 
+/* 단위작업에도 입력 */
 insert into dm_log_dtl (영역구분명, 프로그램ID, 단위작업명, 기준일자, 작업단계번호, 작업시작일시, 작업단위시작일시, 작업단위종료일시, 작업소요시분초, 작업건수, 작업결과코드, 작업에러문자번호, 작업에러내용)
-select vs_prg_gb, in_prg_id, in_prg_tl_nm, vs_job_d, vs_job_step_nbr, parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm), parse_datetime("%Y%m%d%H%M%S",in_job_start_Dtl_dttm), parse_datetime("%Y%m%d%H%M%S", in_job_end_dtl_dttm), v_runtime_1, in_data_prcs_cnt, vs_job_prgrs_rslt_cd, coalesce(vs_job_err_ltrs_nbr,' '), coalesce(vs_job_err_cntnt, ' ');
+select vs_prg_gb
+, in_prg_id
+, in_prg_tl_nm
+, vs_job_d
+, vs_job_step_nbr. -- 작업단계번호
+, parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm) --작업시작일시
+, parse_datetime("%Y%m%d%H%M%S",in_job_start_Dtl_dttm) --작업단위시작상세일시
+, parse_datetime("%Y%m%d%H%M%S",in_job_end_dtl_dttm) --작업단위종료상세일시
+, v_runtime_1
+, in_data_prcs_cnt
+, vs_job_prgrs_rslt_cd  --작업결과코드
+, coalesce(vs_job_err_ltrs_nbr,' ') --작업에러문자번호
+, coalesce(vs_job_err_cntnt, ' ') --작업에러내용
+;
 
 elseif v_cnt > 0 then
 
+/* STEP에 대한 성공 로그 */
 insert into dm_log_dtl (영역구분명, 프로그램ID, 단위작업명, 기준일자, 작업단계번호, 작업시작일시, 작업단위시작일시, 작업단위종료일시, 작업소요시분초, 작업건수, 작업결과코드, 작업에러문자번호, 작업에러내용)
-select vs_prg_gb, in_prg_id, in_prg_tl_nm, vs_job_d, vs_job_step_nbr, parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm), parse_datetime("%Y%m%d%H%M%S",in_job_start_Dtl_dttm), parse_datetime("%Y%m%d%H%M%S", in_job_end_dtl_dttm), v_runtime, in_data_prcs_cnt, vs_job_prgrs_rslt_cd, coalesce(vs_job_err_ltrs_nbr,' '), coalesce(vs_job_err_cntnt, ' ');
+select vs_prg_gb
+, in_prg_id
+, in_prg_tl_nm
+, vs_job_d
+, vs_job_step_nbr  --작업단계번호
+, parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm) --작업시작일시
+, parse_datetime("%Y%m%d%H%M%S",in_job_start_Dtl_dttm) --작업단위시작상세일시
+, parse_datetime("%Y%m%d%H%M%S",in_job_end_dtl_dttm) --작업단위종료상세일시
+, v_runtime
+, in_data_prcs_cnt
+, vs_job_prgrs_rslt_cd --작업결과코드
+, coalesce(vs_job_err_ltrs_nbr,' ') --작업에러문자번호
+, coalesce(vs_job_err_cntnt, ' ') --작업에러내용
+;
 
-if in_job_step_nbr < 998 then
-update dm_log set 작업종료여부 = 'N' where 프로그램ID = in_prg_id
-and 작업시작일시 = parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm);
+if in_job_step_nbr < 998 then   --통계정보나 파티션 exchange가 아니면
 
-elseif in_job_step_nbr >= 998 then
-update dm_log set 작업종료여부 = 'Y' where 프로그램ID = in_prg_id
-and 작업시작일시 = parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm);
+update dm_log 
+set `작업단계번호` = vs_job_step_nbr  
+, `작업종료일시` = parse_datetime("%Y%m%d%H%M%S",in_job_end_dtl_dttm) 
+, `작업경과시간` = v_runtime_1 
+, `INSERT건수` = `INSERT건수` + vs_int_cnt 
+, `DELETE건수` = `DELETE건수` + vs_del_cnt 
+, `READ건수` = `READ건수` + vs_read_cnt
+, `REJECT건수` = `REJECT건수` + vs_rejt_cnt 
+, `작업종료여부` = 'N' --작업종료여부 
+, `작업결과코드` = vs_job_prgrs_rslt_cd --작업결과코드 
+, `작업에러문자번호` = coalesce(vs_job_err_ltrs_nbr,'') --작업에러문자번호 
+, `작업에러내용` = coalesce(vs_job_err_cntnt,'') --작업에러내용  
+where `프로그램ID` = in_prg_id 
+and 작업시작일시 = parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm); --작업기준일자
 
+elseif in_job_step_nbr >= 998 then  --통계정보나 파티션 exchange
+update dm_log 
+set `작업단계번호` = vs_job_step_nbr  
+, `작업종료일시` = parse_datetime("%Y%m%d%H%M%S",in_job_end_dtl_dttm) 
+, `작업경과시간` = v_runtime_1 
+, `INSERT건수` = `INSERT건수` + vs_int_cnt 
+, `DELETE건수` = `DELETE건수` + vs_del_cnt 
+, `READ건수` = `READ건수` + vs_read_cnt
+, `REJECT건수` = `REJECT건수` + vs_rejt_cnt 
+, `작업종료여부` = 'Y' --작업종료여부 
+, `작업결과코드` = vs_job_prgrs_rslt_cd --작업결과코드 
+, `작업에러문자번호` = coalesce(vs_job_err_ltrs_nbr,'') --작업에러문자번호 
+, `작업에러내용` = coalesce(vs_job_err_cntnt,'') --작업에러내용  
+where `프로그램ID` = in_prg_id 
+and 작업시작일시 = parse_datetime("%Y%m%d%H%M%S",in_frst_job_start_dtl_dttm); --작업기준일자
+;
 end if;
 
 end if;
